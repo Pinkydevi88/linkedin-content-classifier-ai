@@ -1,75 +1,95 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>LinkedIn Content Classifier AI</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-  
-      <style>
+<meta charset="UTF-8">
+<title>LinkedIn Content Classifier AI</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
 body {
     margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0f2027, #1c2b3a, #16222a);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     color: white;
-    text-align: center;
+}
+
+/* Floating glow background */
+body::before {
+    content: "";
+    position: fixed;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(0,255,255,0.2), transparent 70%);
+    top: -150px;
+    left: -150px;
+    animation: floatGlow 10s infinite alternate ease-in-out;
+    z-index: -1;
+}
+
+@keyframes floatGlow {
+    from { transform: translate(0,0); }
+    to { transform: translate(120px,100px); }
 }
 
 h1 {
-    font-size: 38px;
-    margin-top: 40px;
-    letter-spacing: 1px;
+    margin-top: 60px;
+    font-size: 36px;
 }
 
 .subtitle {
-    opacity: 0.8;
-    margin-bottom: 30px;
+    opacity: 0.7;
+    margin-bottom: 40px;
 }
 
+/* Glass Card */
 .card {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(12px);
-    border-radius: 20px;
+    width: 520px;
     padding: 40px;
-    width: 500px;
-    margin: auto;
-    box-shadow: 0 0 40px rgba(0, 255, 255, 0.2);
-    transition: 0.3s;
-}
-
-.card:hover {
-    transform: scale(1.02);
+    border-radius: 25px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    text-align: center;
 }
 
 button {
-    background: linear-gradient(90deg, #00f5ff, #00ff95);
+    background: linear-gradient(90deg, #00f5ff, #00ffb3);
     border: none;
-    padding: 12px 25px;
-    border-radius: 30px;
-    font-size: 16px;
+    padding: 12px 28px;
+    border-radius: 40px;
+    font-weight: 600;
     cursor: pointer;
     color: black;
-    font-weight: bold;
     transition: 0.3s;
 }
 
 button:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 20px #00ffcc;
+    box-shadow: 0 0 15px #00ffcc;
 }
 
 input {
-    margin-top: 15px;
+    margin-top: 20px;
 }
 
 #image-preview img {
     margin-top: 20px;
-    border-radius: 10px;
+    border-radius: 12px;
     box-shadow: 0 0 20px rgba(0,255,255,0.4);
 }
 
+/* Prediction Bars */
 .prediction-bar {
-    margin: 10px 0;
+    margin: 15px 0;
     text-align: left;
 }
 
@@ -77,85 +97,105 @@ input {
     background: rgba(255,255,255,0.1);
     border-radius: 20px;
     overflow: hidden;
+    margin-top: 5px;
 }
 
 .bar {
-    height: 10px;
+    height: 8px;
     border-radius: 20px;
-    background: linear-gradient(90deg, #00f5ff, #00ff95);
-    transition: width 0.5s ease-in-out;
+    background: linear-gradient(90deg, #00f5ff, #00ffb3);
+    transition: width 0.6s ease-in-out;
+}
+
+#top-result {
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #00ffcc;
 }
 
 footer {
-    margin-top: 40px;
-    opacity: 0.7;
+    margin-top: 50px;
+    opacity: 0.6;
 }
 </style>
-  
 </head>
 
 <body>
 
-  <h1>🧠 LinkedIn Content Classifier AI</h1>
-  <p>Classifies posts into High Value, Promotional, or Casual</p>
+<h1>🧠 LinkedIn Content Classifier AI</h1>
+<p class="subtitle">Classifies posts into High Value, Promotional, or Casual</p>
 
-  <div class="container">
-    <button type="button" onclick="init()">Load AI Model</button>
+<div class="card">
+    <button onclick="init()">Load AI Model</button>
     <br><br>
     <input type="file" accept="image/*" onchange="predictImage(event)">
     <div id="image-preview"></div>
+    <h2 id="top-result"></h2>
     <div id="label-container"></div>
-  </div>
+</div>
 
-  <footer>
+<footer>
     Built by Pinky Devi | Community Manager, Data Analyst & AI Explorer 🚀
-  </footer>
+</footer>
 
 <script>
-    const MODEL_URL = "./";
+const MODEL_URL = "./";
+let model, maxPredictions;
 
-    let model, maxPredictions;
-
-    async function init() {
-        const modelURL = MODEL_URL + "model.json";
-        const metadataURL = MODEL_URL + "metadata.json";
-
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
-        alert("Model Loaded Successfully!");
-    }
-
-    async function predictImage(event) {
-        const file = event.target.files[0];
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(file);
-        img.width = 300;
-
-        const preview = document.getElementById("image-preview");
-        preview.innerHTML = "";
-        preview.appendChild(img);
-
-        const prediction = await model.predict(img);
-        const labelContainer = document.getElementById("label-container");
-        labelContainer.innerHTML = "";
-
-        for (let i = 0; i < maxPredictions; i++) {
-
-    const percentage = (prediction[i].probability * 100).toFixed(2);
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "prediction-bar";
-
-    wrapper.innerHTML = `
-        <div>${prediction[i].className} - ${percentage}%</div>
-        <div class="bar-container">
-            <div class="bar" style="width:${percentage}%"></div>
-        </div>
-    `;
-
-    labelContainer.appendChild(wrapper);
+async function init() {
+    const modelURL = MODEL_URL + "model.json";
+    const metadataURL = MODEL_URL + "metadata.json";
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+    alert("Model Loaded Successfully!");
 }
+
+async function predictImage(event) {
+
+    if (!model) {
+        alert("Please load the model first!");
+        return;
     }
+
+    const file = event.target.files[0];
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    img.width = 300;
+
+    const preview = document.getElementById("image-preview");
+    preview.innerHTML = "";
+    preview.appendChild(img);
+
+    const prediction = await model.predict(img);
+    const labelContainer = document.getElementById("label-container");
+    const topResult = document.getElementById("top-result");
+
+    labelContainer.innerHTML = "";
+    topResult.innerHTML = "";
+
+    const topPrediction = prediction.reduce((prev, current) =>
+        (prev.probability > current.probability) ? prev : current
+    );
+
+    topResult.innerHTML = "✨ Prediction: " + topPrediction.className;
+
+    for (let i = 0; i < maxPredictions; i++) {
+        const percentage = (prediction[i].probability * 100).toFixed(2);
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "prediction-bar";
+
+        wrapper.innerHTML = `
+            <div>${prediction[i].className} - ${percentage}%</div>
+            <div class="bar-container">
+                <div class="bar" style="width:${percentage}%"></div>
+            </div>
+        `;
+
+        labelContainer.appendChild(wrapper);
+    }
+}
 </script>
 
 </body>
