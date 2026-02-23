@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>LinkedIn Content Classifier AI</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: white;
+      text-align: center;
+      padding: 40px;
+    }
+
+    h1 {
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #ccc;
+    }
+
+    .container {
+      background: rgba(255,255,255,0.05);
+      padding: 30px;
+      border-radius: 15px;
+      width: 60%;
+      margin: auto;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    button {
+      background: #00f5ff;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    button:hover {
+      background: #00c3cc;
+    }
+
+    #label-container div {
+      margin-top: 10px;
+      font-size: 18px;
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 14px;
+      color: #aaa;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🧠 LinkedIn Content Classifier AI</h1>
+  <p>Classifies posts into High Value, Promotional, or Casual</p>
+
+  <div class="container">
+    <button type="button" onclick="init()">Load AI Model</button>
+    <br><br>
+    <input type="file" accept="image/*" onchange="predictImage(event)">
+    <div id="image-preview"></div>
+    <div id="label-container"></div>
+  </div>
+
+  <footer>
+    Built by Pinky Devi | Data Analyst & AI Explorer 🚀
+  </footer>
+
+<script>
+    const URL = "./";
+
+    let model, maxPredictions;
+
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+        alert("Model Loaded Successfully!");
+    }
+
+    async function predictImage(event) {
+        const file = event.target.files[0];
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+        img.width = 300;
+
+        const preview = document.getElementById("image-preview");
+        preview.innerHTML = "";
+        preview.appendChild(img);
+
+        const prediction = await model.predict(img);
+        const labelContainer = document.getElementById("label-container");
+        labelContainer.innerHTML = "";
+
+        for (let i = 0; i < maxPredictions; i++) {
+            const classPrediction =
+                prediction[i].className + ": " + (prediction[i].probability * 100).toFixed(2) + "%";
+            const div = document.createElement("div");
+            div.innerHTML = classPrediction;
+            labelContainer.appendChild(div);
+        }
+    }
+</script>
+
+</body>
+</html>
